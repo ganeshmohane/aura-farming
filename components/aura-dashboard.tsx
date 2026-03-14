@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Flame, Trophy, Zap } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Flame, Trophy, Volume2, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +30,40 @@ const presets = [
   { label: "Generational Aura Loss", value: -250 },
 ];
 
+function playSyntheticFahhh() {
+  const audioContext = new window.AudioContext();
+  const bufferSize = audioContext.sampleRate * 0.8;
+  const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i += 1) {
+    const progress = i / data.length;
+    const envelope = Math.max(0, 1 - progress * 1.25);
+    data[i] = (Math.random() * 2 - 1) * envelope;
+  }
+
+  const source = audioContext.createBufferSource();
+  source.buffer = noiseBuffer;
+
+  const filter = audioContext.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.value = 700;
+  filter.Q.value = 0.8;
+
+  const gain = audioContext.createGain();
+  gain.gain.value = 0.5;
+
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(audioContext.destination);
+
+  source.start();
+
+  source.onended = () => {
+    void audioContext.close();
+  };
+}
+
 export function AuraDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [events, setEvents] = useState<AuraEvent[]>([]);
@@ -45,6 +79,10 @@ export function AuraDashboard() {
   const [amount, setAmount] = useState<string>("10");
   const [reason, setReason] = useState("");
   const [sending, setSending] = useState(false);
+
+  const [soundBlocked, setSoundBlocked] = useState(false);
+  const [soundSource, setSoundSource] = useState<"mp3" | "synth">("mp3");
+  const soundRef = useRef<HTMLAudioElement | null>(null);
 
   const topUser = users[0];
   const totalAura = useMemo(() => users.reduce((sum, user) => sum + user.aura, 0), [users]);
@@ -72,6 +110,45 @@ export function AuraDashboard() {
   useEffect(() => {
     void loadData();
   }, []);
+
+  useEffect(() => {
+    const audio = new Audio("/fahhh.mp3");
+    audio.preload = "auto";
+    audio.volume = 0.9;
+    soundRef.current = audio;
+
+    audio.onerror = () => {
+      setSoundSource("synth");
+      setSoundBlocked(true);
+    };
+
+    audio.play().catch(() => {
+      setSoundBlocked(true);
+    });
+
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, []);
+
+  async function playFahhh() {
+    if (soundSource === "synth") {
+      playSyntheticFahhh();
+      setSoundBlocked(false);
+      return;
+    }
+
+    if (!soundRef.current) return;
+
+    try {
+      soundRef.current.currentTime = 0;
+      await soundRef.current.play();
+      setSoundBlocked(false);
+    } catch {
+      setSoundBlocked(true);
+    }
+  }
 
   async function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,6 +214,18 @@ export function AuraDashboard() {
         <p className="mt-3 max-w-2xl text-black/70">
           Register users, award aura in real-time, and track current leaderboard standings.
         </p>
+        {soundBlocked ? (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-black p-3 text-sm">
+            <span>
+              {soundSource === "mp3"
+                ? "Autoplay got blocked by browser. Tap to play the fahhh sound."
+                : "fahhh.mp3 missing. Tap to play built-in synthetic fahhh sound."}
+            </span>
+            <Button type="button" size="sm" variant="outline" onClick={() => void playFahhh()}>
+              <Volume2 className="mr-2 h-4 w-4" /> Play fahhh
+            </Button>
+          </div>
+        ) : null}
       </section>
 
       {error ? (
