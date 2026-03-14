@@ -1,2 +1,20 @@
-# aura-farming
-It's fun project where people can farm aura be ready for +999 or -999
+# Aura Farming
+
+A simple Next.js + shadcn/ui landing page for a playful social app where communities award each other positive or negative aura points.
+
+## Stack
+
+- Next.js (App Router)
+- TypeScript
+- Tailwind CSS
+- shadcn/ui-style reusable components
+- Black and white minimalist theme
+
+## Run locally
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`.
